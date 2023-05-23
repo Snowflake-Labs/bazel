@@ -33,6 +33,7 @@ import com.google.devtools.build.lib.bazel.repository.cache.RepositoryCache;
 import com.google.devtools.build.lib.bazel.repository.downloader.UrlRewriter.RewrittenURL;
 import com.google.devtools.build.lib.events.Event;
 import com.google.devtools.build.lib.events.ExtendedEventHandler;
+import com.google.devtools.build.lib.events.NullEventHandler;
 import com.google.devtools.build.lib.profiler.Profiler;
 import com.google.devtools.build.lib.profiler.SilentCloseable;
 import com.google.devtools.build.lib.vfs.FileSystemUtils;
@@ -134,7 +135,8 @@ public class DownloadManager {
       Map<String, String> clientEnv,
       String context,
       Phaser downloadPhaser,
-      boolean mayHardlink) {
+      boolean mayHardlink,
+      boolean suppressWarnings) {
     return executorService.submit(
         () -> {
           if (downloadPhaser.register() != 0) {
@@ -152,7 +154,8 @@ public class DownloadManager {
                 output,
                 clientEnv,
                 context,
-                mayHardlink);
+                mayHardlink,
+                suppressWarnings);
           } finally {
             downloadPhaser.arrive();
           }
@@ -199,7 +202,8 @@ public class DownloadManager {
       Path output,
       Map<String, String> clientEnv,
       String context,
-      boolean mayHardlink)
+      boolean mayHardlink,
+      boolean suppressWarnings)
       throws IOException, InterruptedException {
     if (Thread.interrupted()) {
       throw new InterruptedException();
@@ -339,7 +343,7 @@ public class DownloadManager {
             checksum,
             canonicalId,
             destination,
-            eventHandler,
+            suppressWarnings ? NullEventHandler.INSTANCE : eventHandler,
             clientEnv,
             type,
             context);
