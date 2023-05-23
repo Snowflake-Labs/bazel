@@ -857,7 +857,8 @@ When <code>sha256</code> or <code>integrity</code> is user specified, setting an
               downloadPhaser,
               // The repo rule may modify the file after the download, so we cannot guarantee that
               // hardlinking is safe.
-              /* mayHardlink= */ false);
+              /* mayHardlink= */ false,
+              /* suppressWarnings= */ allowFail);
       download =
           new PendingDownload(
               executable,
@@ -1111,7 +1112,8 @@ Strip the given number of leading components from file paths on extraction. Only
               downloadPhaser,
               // The archive is not going to be modified and not accessible to the user, so its safe
               // to hardlink.
-              /* mayHardlink= */ true);
+              /* mayHardlink= */ true,
+              /* suppressWarnings= */ allowFail);
       // Ensure that the download is cancelled if the repo rule is restarted as it runs in its own
       // executor.
       PendingDownload pendingTask =
