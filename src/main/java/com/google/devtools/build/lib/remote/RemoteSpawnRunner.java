@@ -185,6 +185,29 @@ public class RemoteSpawnRunner implements SpawnRunner {
     }
   }
 
+  /**
+   * Guess if an action failed due to a transient remote error or not.
+   *
+   * <p>As described in <a href="https://github.com/bazelbuild/bazel/issues/18319">#18319</a>, the
+   * Remote Build protocol does not yet provide a way to distinguish between regular action crashes
+   * and unexpected worker crashes. This provides a heuristic to retry on likely worker crashes.
+   * The specific error code we may get depends on the remote executor implementation so we need to
+   * be quite liberal here: Go funnels all non-regular exit codes into {@code -1} and the shell
+   * returns {@code 128+SIGNO}.
+   */
+  private boolean isTransientError(RemoteAction action, RemoteActionResult result) {
+    if (!remoteOptions.remoteExitSignalsAreTransientErrors) {
+      return false;
+    }
+
+    boolean isTestAction = action.getSpawn().getMnemonic().equals("TestRunner");
+    if (isTestAction) {
+      return false;
+    }
+
+    return result.getExitCode() < 0 || result.getExitCode() > 127;
+  }
+
   @Override
   public SpawnResult exec(Spawn spawn, SpawnExecutionContext context)
       throws ExecException, InterruptedException, IOException, ForbiddenActionInputException {
@@ -328,6 +351,21 @@ public class RemoteSpawnRunner implements SpawnRunner {
 
             try (SilentCloseable c = prof.profile(REMOTE_DOWNLOAD, "download server logs")) {
               maybeDownloadServerLogs(action, result.getResponse());
+            }
+
+            if (isTransientError(action, result)) {
+              // This contraption is required to convince the ExecuteRetrier that the failure can
+              // be retried.
+              com.google.rpc.Status synthesizedStatus = com.google.rpc.Status.newBuilder()
+                  .setCode(com.google.rpc.Code.FAILED_PRECONDITION.getNumber())
+                  .setMessage(
+                      "Remote action seems to have terminated due to a signal (exit code "
+                          + result.getExitCode()
+                          + "); assuming worker crash to retry")
+                  .addDetails(Any.pack(RetryInfo.newBuilder().build()))
+                  .build();
+              Exception cause = new ExecutionStatusException(synthesizedStatus, null);
+              throw new IOException(cause);
             }
 
             try {
