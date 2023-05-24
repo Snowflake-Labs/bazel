@@ -362,6 +362,22 @@ public final class RemoteOptions extends CommonRemoteOptions {
               + "If set to 0, retries are disabled.")
   public int remoteMaxRetryAttempts;
 
+  // TODO(https://github.com/bazelbuild/bazel/issues/18319): Remove once the Remote Build
+  // protocol can distinguish between abrupt worker termination and action termination.
+  @Option(
+      name = "experimental_remote_exit_signals_are_transient_errors",
+      defaultValue = "false",
+      documentationCategory = OptionDocumentationCategory.REMOTE,
+      effectTags = {OptionEffectTag.UNKNOWN},
+      help =
+          "Consider abrupt terminations of remote actions as transient failures. "
+              + "This can be used to retry actions that fail due to their remote worker "
+              + "crashing instead of failing the build. Note that this cannot differentiate "
+              + "between those failures and legitimate action crashes so, if you enable this, "
+              + "you should also set --remote_retries to non-zero or enable local fallback "
+              + "to avoid getting into an infinite retry loop.")
+  public boolean remoteExitSignalsAreTransientErrors;
+
   @Option(
       name = "disk_cache",
       defaultValue = "null",
