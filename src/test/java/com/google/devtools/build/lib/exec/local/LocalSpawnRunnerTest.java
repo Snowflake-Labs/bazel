@@ -42,6 +42,7 @@ import com.google.devtools.build.lib.actions.SpawnResult.Status;
 import com.google.devtools.build.lib.actions.cache.VirtualActionInput;
 import com.google.devtools.build.lib.actions.util.ActionsTestUtil;
 import com.google.devtools.build.lib.exec.BinTools;
+import com.google.devtools.build.lib.exec.ExecutionOptions;
 import com.google.devtools.build.lib.exec.RunfilesTreeUpdater;
 import com.google.devtools.build.lib.exec.SpawnExecutingEvent;
 import com.google.devtools.build.lib.exec.SpawnSchedulingEvent;
@@ -106,6 +107,7 @@ public class LocalSpawnRunnerTest {
         LocalEnvProvider localEnvProvider) {
       super(
           execRoot,
+          Options.getDefaults(ExecutionOptions.class),
           localExecutionOptions,
           resourceManager,
           localEnvProvider,
@@ -611,6 +613,7 @@ public class LocalSpawnRunnerTest {
     LocalSpawnRunner runner =
         new LocalSpawnRunner(
             tempDir,
+            Options.getDefaults(ExecutionOptions.class),
             Options.getDefaults(LocalExecutionOptions.class),
             resourceManager,
             LocalEnvProvider.forCurrentOs(ImmutableMap.of()),
@@ -848,6 +851,7 @@ public class LocalSpawnRunnerTest {
 
     FileSystem fs = new UnixFileSystem(DigestHashFunction.SHA256, /* hashAttributeName= */ "");
 
+    ExecutionOptions executionOptions = Options.getDefaults(ExecutionOptions.class);
     LocalExecutionOptions options = Options.getDefaults(LocalExecutionOptions.class);
 
     int minimumWallTimeToSpendInMs = 10 * 1000;
@@ -873,6 +877,7 @@ public class LocalSpawnRunnerTest {
     LocalSpawnRunner runner =
         new LocalSpawnRunner(
             execRoot,
+            executionOptions,
             options,
             resourceManager,
             LocalSpawnRunnerTest::keepLocalEnvUnchanged,
