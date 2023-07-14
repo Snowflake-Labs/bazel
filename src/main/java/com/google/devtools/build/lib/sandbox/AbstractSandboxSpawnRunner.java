@@ -79,6 +79,7 @@ abstract class AbstractSandboxSpawnRunner implements SpawnRunner {
   private final ResourceManager resourceManager;
   private final Reporter reporter;
   protected final ImmutableMap<String, String> clientEnv;
+  private final boolean handlesCaching;
 
   public AbstractSandboxSpawnRunner(CommandEnvironment cmdEnv) {
     this.sandboxOptions = cmdEnv.getOptions().getOptions(SandboxOptions.class);
@@ -90,6 +91,7 @@ abstract class AbstractSandboxSpawnRunner implements SpawnRunner {
     this.resourceManager = cmdEnv.getLocalResourceManager();
     this.reporter = cmdEnv.getReporter();
     this.clientEnv = cmdEnv.getClientEnv();
+    this.handlesCaching = !cmdEnv.getOptions().getOptions(ExecutionOptions.class).useRemoteCacheForCacheUnawareSpawns;
   }
 
   @Override
@@ -129,7 +131,7 @@ abstract class AbstractSandboxSpawnRunner implements SpawnRunner {
 
   @Override
   public boolean handlesCaching() {
-    return false;
+    return this.handlesCaching;
   }
 
   protected abstract SandboxedSpawn prepareSpawn(Spawn spawn, SpawnExecutionContext context)
