@@ -52,6 +52,7 @@ import com.google.devtools.build.lib.collect.nestedset.NestedSet;
 import com.google.devtools.build.lib.collect.nestedset.NestedSetBuilder;
 import com.google.devtools.build.lib.collect.nestedset.Order;
 import com.google.devtools.build.lib.events.ExtendedEventHandler;
+import com.google.devtools.build.lib.exec.ExecutionOptions;
 import com.google.devtools.build.lib.exec.SpawnExecutingEvent;
 import com.google.devtools.build.lib.exec.SpawnRunner.SpawnExecutionContext;
 import com.google.devtools.build.lib.exec.local.LocalEnvProvider;
@@ -156,6 +157,7 @@ public class WorkerSpawnRunnerTest {
             /* binTools= */ null,
             resourceManager,
             /* runfilesTreeUpdater= */ null,
+            new ExecutionOptions(),
             new WorkerOptions(),
             metricsCollector,
             new JavaClock());
@@ -547,6 +549,7 @@ public class WorkerSpawnRunnerTest {
         /* binTools= */ null,
         resourceManager,
         /* runfilesTreeUpdater= */ null,
+        new ExecutionOptions(),
         workerOptions,
         metricsCollector,
         new JavaClock());
