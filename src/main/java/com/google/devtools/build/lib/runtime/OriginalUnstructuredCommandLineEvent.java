@@ -21,6 +21,7 @@ import com.google.devtools.build.lib.buildeventstream.BuildEventStreamProtos;
 import com.google.devtools.build.lib.buildeventstream.BuildEventStreamProtos.BuildEventId;
 import com.google.devtools.build.lib.buildeventstream.BuildEventWithOrderConstraint;
 import com.google.devtools.build.lib.buildeventstream.GenericBuildEvent;
+import com.google.devtools.build.lib.util.OptionsUtils;
 import java.util.Collection;
 import java.util.List;
 
@@ -30,7 +31,7 @@ public class OriginalUnstructuredCommandLineEvent implements BuildEventWithOrder
   private final ImmutableList<String> args;
 
   public OriginalUnstructuredCommandLineEvent(List<String> args) {
-    this.args = ImmutableList.copyOf(args);
+    this.args = OptionsUtils.scrubArgs(ImmutableList.copyOf(args));
   }
 
   @Override

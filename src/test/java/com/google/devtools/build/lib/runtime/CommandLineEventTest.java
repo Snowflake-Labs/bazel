@@ -26,6 +26,7 @@ import com.google.devtools.build.lib.runtime.proto.CommandLineOuterClass.ChunkLi
 import com.google.devtools.build.lib.runtime.proto.CommandLineOuterClass.CommandLine;
 import com.google.devtools.build.lib.runtime.proto.CommandLineOuterClass.CommandLineSection;
 import com.google.devtools.build.lib.runtime.proto.CommandLineOuterClass.CommandLineSection.SectionTypeCase;
+import com.google.devtools.build.lib.runtime.proto.CommandLineOuterClass.Option;
 import com.google.devtools.build.lib.runtime.proto.CommandLineOuterClass.OptionList;
 import com.google.devtools.build.lib.util.Pair;
 import com.google.devtools.common.options.OptionPriority.PriorityCategory;
@@ -510,5 +511,105 @@ public class CommandLineEventTest {
     assertThat(line.getSections(0).getSectionTypeCase()).isEqualTo(SectionTypeCase.CHUNK_LIST);
     assertThat(line.getSections(0).getChunkList().getChunk(0))
         .isEqualTo("The quick brown fox jumps over the lazy dog");
+  }
+
+  @Test
+  public void testScrubEnvOption() throws OptionsParsingException {
+    OptionsParser fakeStartupOptions =
+        OptionsParser.builder().optionsClasses(BlazeServerStartupOptions.class).build();
+    OptionsParser fakeCommandOptions =
+        OptionsParser.builder().optionsClasses(TestOptions.class).build();
+    fakeCommandOptions.parse(
+        PriorityCategory.COMMAND_LINE,
+        "command line",
+        ImmutableList.of(
+            "--test_env=HOME=/home/jmmv",
+            "--test_env=NOT_ALLOWED=1234",
+            "--test_env", "ANOTHER=foo=1234",
+            "--test_inherit_env=HOME",
+            "--test_inherit_env=NOT_ALLOWED"
+        ));
+
+    CommandLine line =
+        new OriginalCommandLineEvent(
+            "testblaze",
+            fakeStartupOptions,
+            "someCommandName",
+            fakeCommandOptions,
+            Optional.of(ImmutableList.of()))
+            .asStreamProto(null)
+            .getStructuredCommandLine();
+
+    assertThat(line.getCommandLineLabel()).isEqualTo("original");
+    checkCommandLineSectionLabels(line);
+
+    assertThat(line.getSections(0).getChunkList().getChunk(0)).isEqualTo("testblaze");
+    assertThat(line.getSections(1).getOptionList().getOptionCount()).isEqualTo(0);
+    assertThat(line.getSections(2).getChunkList().getChunk(0)).isEqualTo("someCommandName");
+    // Expect the rc file options and invocation policy options to not be listed with the explicit
+    // command line options.
+    assertThat(line.getSections(3).getOptionList().getOptionCount()).isEqualTo(5);
+    {
+      Option option = line.getSections(3).getOptionList().getOption(0);
+      assertThat(option.getCombinedForm()).isEqualTo("--test_env=HOME=/home/jmmv");
+      assertThat(option.getOptionValue()).isEqualTo("HOME=/home/jmmv");
+    }
+    {
+      Option option = line.getSections(3).getOptionList().getOption(1);
+      assertThat(option.getCombinedForm()).isEqualTo("--test_env=NOT_ALLOWED=REDACTED");
+      assertThat(option.getOptionValue()).isEqualTo("NOT_ALLOWED=REDACTED");
+    }
+    {
+      Option option = line.getSections(3).getOptionList().getOption(2);
+      assertThat(option.getCombinedForm()).isEqualTo("--test_env ANOTHER=REDACTED");
+      assertThat(option.getOptionValue()).isEqualTo("ANOTHER=REDACTED");
+    }
+    {
+      Option option = line.getSections(3).getOptionList().getOption(3);
+      assertThat(option.getCombinedForm()).isEqualTo("--test_inherit_env=HOME");
+      assertThat(option.getOptionValue()).isEqualTo("HOME");
+    }
+    {
+      Option option = line.getSections(3).getOptionList().getOption(4);
+      assertThat(option.getCombinedForm()).isEqualTo("--test_inherit_env=NOT_ALLOWED");
+      assertThat(option.getOptionValue()).isEqualTo("NOT_ALLOWED");
+    }
+    assertThat(line.getSections(4).getChunkList().getChunkCount()).isEqualTo(0);
+  }
+
+  @Test
+  public void testScrubResidualArgs() throws OptionsParsingException {
+    OptionsParser fakeStartupOptions =
+        OptionsParser.builder().optionsClasses(BlazeServerStartupOptions.class).build();
+    OptionsParser fakeCommandOptions =
+        OptionsParser.builder().optionsClasses(TestOptions.class).build();
+    fakeCommandOptions.parse(
+        PriorityCategory.COMMAND_LINE,
+        "command line",
+        ImmutableList.of(
+            "foo",
+            "bar"
+        ));
+
+    CommandLine line =
+        new OriginalCommandLineEvent(
+            "testblaze",
+            fakeStartupOptions,
+            "run",
+            fakeCommandOptions,
+            Optional.of(ImmutableList.of()))
+            .asStreamProto(null)
+            .getStructuredCommandLine();
+
+    assertThat(line.getCommandLineLabel()).isEqualTo("original");
+    checkCommandLineSectionLabels(line);
+
+    assertThat(line.getSections(0).getChunkList().getChunk(0)).isEqualTo("testblaze");
+    assertThat(line.getSections(1).getOptionList().getOptionCount()).isEqualTo(0);
+    assertThat(line.getSections(2).getChunkList().getChunk(0)).isEqualTo("run");
+    assertThat(line.getSections(3).getOptionList().getOptionCount()).isEqualTo(0);
+    assertThat(line.getSections(4).getChunkList().getChunkCount()).isEqualTo(2);
+    assertThat(line.getSections(4).getChunkList().getChunk(0)).isEqualTo("REDACTED");
+    assertThat(line.getSections(4).getChunkList().getChunk(1)).isEqualTo("REDACTED");
   }
 }
