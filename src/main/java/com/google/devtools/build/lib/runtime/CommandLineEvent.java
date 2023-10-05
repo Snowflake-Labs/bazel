@@ -29,6 +29,8 @@ import com.google.devtools.build.lib.runtime.proto.CommandLineOuterClass.Command
 import com.google.devtools.build.lib.runtime.proto.CommandLineOuterClass.CommandLineSection;
 import com.google.devtools.build.lib.runtime.proto.CommandLineOuterClass.Option;
 import com.google.devtools.build.lib.runtime.proto.CommandLineOuterClass.OptionList;
+import com.google.devtools.build.lib.util.OptionsUtils;
+import com.google.devtools.build.lib.util.OptionsUtils.OptionSensitivity;
 import com.google.devtools.build.lib.util.Pair;
 import com.google.devtools.common.options.OptionDefinition;
 import com.google.devtools.common.options.OptionEffectTag;
@@ -137,11 +139,13 @@ public abstract class CommandLineEvent implements BuildEventWithOrderConstraint 
 
     private Option createOption(
         OptionDefinition optionDefinition, String combinedForm, @Nullable String value) {
+      OptionSensitivity sensitivity = OptionsUtils.getOptionSensitivity(optionDefinition.getOptionName());
+
       Option.Builder option = Option.newBuilder();
-      option.setCombinedForm(combinedForm);
+      option.setCombinedForm(OptionsUtils.maybeScrubCombinedForm(sensitivity, combinedForm));
       option.setOptionName(optionDefinition.getOptionName());
       if (value != null) {
-        option.setOptionValue(value);
+        option.setOptionValue(OptionsUtils.maybeScrubAssignment(sensitivity, value));
       }
       option.addAllEffectTags(getProtoEffectTags(optionDefinition.getOptionEffectTags()));
       option.addAllMetadataTags(getProtoMetadataTags(optionDefinition.getOptionMetadataTags()));
@@ -186,9 +190,17 @@ public abstract class CommandLineEvent implements BuildEventWithOrderConstraint 
       // project files, as in runtime.commands.ProjectFileSupport. To properly report this, we would
       // need to let the command customize how the residual is listed. This catch-all could serve
       // as a default in this case.
+      ChunkList.Builder builder = ChunkList.newBuilder();
+      if (OptionsUtils.sensitiveResidualCommands.contains(commandName)) {
+        for (String maybeSensitiveArg : commandOptions.getResidue()) {
+          builder.addChunk("REDACTED");
+        }
+      } else {
+        builder.addAllChunk(commandOptions.getResidue());
+      }
       return CommandLineSection.newBuilder()
           .setSectionLabel("residual")
-          .setChunkList(ChunkList.newBuilder().addAllChunk(commandOptions.getResidue()))
+          .setChunkList(builder.build())
           .build();
     }
   }
