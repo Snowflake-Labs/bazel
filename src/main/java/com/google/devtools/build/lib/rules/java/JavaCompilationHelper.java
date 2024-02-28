@@ -47,6 +47,7 @@ import com.google.devtools.build.lib.rules.java.JavaConfiguration.JavaClasspathM
 import com.google.devtools.build.lib.rules.java.JavaPluginInfo.JavaPluginData;
 import com.google.devtools.build.lib.rules.java.JavaRuleOutputJarsProvider.JavaOutput;
 import com.google.devtools.build.lib.rules.java.JavaToolchainProvider.JspecifyInfo;
+import com.google.devtools.build.lib.util.RegexFilter;
 import com.google.devtools.build.lib.vfs.FileSystemUtils;
 import com.google.devtools.build.lib.vfs.PathFragment;
 import java.util.ArrayList;
@@ -151,6 +152,19 @@ public final class JavaCompilationHelper {
 
   private JavaConfiguration getJavaConfiguration() {
     return ruleContext.getFragment(JavaConfiguration.class);
+  }
+
+  private ImmutableSet<Artifact> filterCoverage(ImmutableSet<Artifact> sourceFiles) {
+    ImmutableSet.Builder<Artifact> builder = ImmutableSet.builder();
+    CoreOptions coreOptions = getConfiguration().getOptions().get(CoreOptions.class);
+    RegexFilter filter = coreOptions.instrumentationFileFilter;
+
+    for (Artifact sourceFile : sourceFiles) {
+      if (filter.isIncluded(sourceFile.getExecPath().toString())) {
+        builder.add(sourceFile);
+      }
+    }
+    return builder.build();
   }
 
   public JavaCompileOutputs<Artifact> createOutputs(Artifact output) {
@@ -361,11 +375,12 @@ public final class JavaCompilationHelper {
     builder.setInjectingRuleKind(attributes.getInjectingRuleKind());
 
     if (coverageArtifact != null) {
+      ImmutableSet<Artifact> filteredSourceFiles = filterCoverage(sourceFiles);
       ruleContext.registerAction(
           new LazyWritePathsFileAction(
               ruleContext.getActionOwner(),
               coverageArtifact,
-              NestedSetBuilder.<Artifact>stableOrder().addAll(sourceFiles).build(),
+              NestedSetBuilder.<Artifact>stableOrder().addAll(filteredSourceFiles).build(),
               /* filesToIgnore= */ ImmutableSet.of(),
               false));
     }
