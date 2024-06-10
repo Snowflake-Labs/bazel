@@ -41,6 +41,7 @@ import com.google.devtools.build.lib.actions.cache.VirtualActionInput;
 import com.google.devtools.build.lib.clock.Clock;
 import com.google.devtools.build.lib.events.ExtendedEventHandler;
 import com.google.devtools.build.lib.exec.BinTools;
+import com.google.devtools.build.lib.exec.ExecutionOptions;
 import com.google.devtools.build.lib.exec.RunfilesTreeUpdater;
 import com.google.devtools.build.lib.exec.SpawnExecutingEvent;
 import com.google.devtools.build.lib.exec.SpawnRunner;
@@ -94,6 +95,7 @@ final class WorkerSpawnRunner implements SpawnRunner {
   private final WorkerParser workerParser;
   private final AtomicInteger requestIdCounter = new AtomicInteger(1);
   private final WorkerMetricsCollector metricsCollector;
+  private final boolean handlesCaching;
 
   public WorkerSpawnRunner(
       SandboxHelpers helpers,
@@ -104,6 +106,7 @@ final class WorkerSpawnRunner implements SpawnRunner {
       BinTools binTools,
       ResourceManager resourceManager,
       RunfilesTreeUpdater runfilesTreeUpdater,
+      ExecutionOptions executionOptions,
       WorkerOptions workerOptions,
       WorkerMetricsCollector workerMetricsCollector,
       Clock clock) {
@@ -117,6 +120,7 @@ final class WorkerSpawnRunner implements SpawnRunner {
     this.resourceManager.setWorkerPool(workers);
     this.metricsCollector = workerMetricsCollector;
     this.metricsCollector.setClock(clock);
+    this.handlesCaching = !executionOptions.useRemoteCacheForCacheUnawareSpawns;
   }
 
   @Override
@@ -143,7 +147,7 @@ final class WorkerSpawnRunner implements SpawnRunner {
 
   @Override
   public boolean handlesCaching() {
-    return false;
+    return handlesCaching;
   }
 
   @Override
