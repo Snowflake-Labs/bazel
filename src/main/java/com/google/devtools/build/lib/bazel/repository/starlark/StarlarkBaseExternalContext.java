@@ -40,6 +40,7 @@ import com.google.devtools.build.lib.cmdline.LabelConstants;
 import com.google.devtools.build.lib.cmdline.RepositoryName;
 import com.google.devtools.build.lib.events.Event;
 import com.google.devtools.build.lib.events.ExtendedEventHandler.FetchProgress;
+import com.google.devtools.build.lib.events.NullEventHandler;
 import com.google.devtools.build.lib.packages.StarlarkInfo;
 import com.google.devtools.build.lib.packages.StructImpl;
 import com.google.devtools.build.lib.packages.StructProvider;
@@ -643,8 +644,8 @@ public abstract class StarlarkBaseExternalContext implements AutoCloseable, Star
             defaultValue = "False",
             named = true,
             doc =
-                "If set, indicate the error in the return value"
-                    + " instead of raising an error for failed downloads"),
+                "If set, indicate the error in the return value instead of raising an error for"
+                    + " failed downloads. This silences errors and warnings."),
         @Param(
             name = "canonical_id",
             defaultValue = "''",
@@ -755,7 +756,7 @@ public abstract class StarlarkBaseExternalContext implements AutoCloseable, Star
               canonicalId,
               Optional.<String>empty(),
               outputPath.getPath(),
-              env.getListener(),
+              allowFail ? NullEventHandler.INSTANCE : env.getListener(),
               envVariables,
               identifyingStringForLogging);
       download =
@@ -844,8 +845,8 @@ public abstract class StarlarkBaseExternalContext implements AutoCloseable, Star
             defaultValue = "False",
             named = true,
             doc =
-                "If set, indicate the error in the return value"
-                    + " instead of raising an error for failed downloads"),
+                "If set, indicate the error in the return value instead of raising an error for"
+                    + " failed downloads. This silences errors and warnings."),
         @Param(
             name = "canonical_id",
             defaultValue = "''",
@@ -957,7 +958,7 @@ public abstract class StarlarkBaseExternalContext implements AutoCloseable, Star
               canonicalId,
               Optional.of(type),
               downloadDirectory,
-              env.getListener(),
+              allowFail ? NullEventHandler.INSTANCE : env.getListener(),
               envVariables,
               identifyingStringForLogging);
       // Ensure that the download is cancelled if the repo rule is restarted as it runs in its own
