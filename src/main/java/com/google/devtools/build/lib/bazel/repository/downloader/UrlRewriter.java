@@ -174,7 +174,9 @@ public class UrlRewriter {
       }
 
       String userInfo = url.url().getUserInfo();
-      if (userInfo != null) {
+      if (authHeaders.containsKey(url.original())) {
+        updatedAuthHeaders.put(url.url(), authHeaders.get(url.original()));
+      } else if (userInfo != null) {
         String token = "Basic " + Base64.getEncoder().encodeToString(userInfo.getBytes(ISO_8859_1));
         updatedAuthHeaders.put(
             url.url(), ImmutableMap.of("Authorization", ImmutableList.of(token)));
@@ -208,7 +210,7 @@ public class UrlRewriter {
     // Cowardly refuse to rewrite non-HTTP(S) urls
     if (REWRITABLE_SCHEMES.stream()
         .noneMatch(scheme -> Ascii.equalsIgnoreCase(scheme, url.getScheme()))) {
-      return ImmutableList.of(RewrittenURL.create(url, false));
+      return ImmutableList.of(RewrittenURL.create(url, url, false));
     }
 
     ImmutableList<RewrittenURL> rewrittenUrls = applyRewriteRules(url);
@@ -277,12 +279,12 @@ public class UrlRewriter {
     }
 
     if (!matchMade) {
-      return ImmutableList.of(RewrittenURL.create(url, false));
+      return ImmutableList.of(RewrittenURL.create(url, url, false));
     }
 
     return rewrittenUrls.build().stream()
         .map(urlString -> prefixWithProtocol(urlString, url.getScheme()))
-        .map(plainUrl -> RewrittenURL.create(plainUrl, true))
+        .map(plainUrl -> RewrittenURL.create(url, plainUrl, true))
         .collect(toImmutableList());
   }
 
@@ -355,9 +357,11 @@ public class UrlRewriter {
   /** Holds the URL along with meta-info, such as whether URL was re-written or not. */
   @AutoValue
   public abstract static class RewrittenURL {
-    static RewrittenURL create(URI url, boolean rewritten) {
-      return new AutoValue_UrlRewriter_RewrittenURL(url, rewritten);
+    static RewrittenURL create(URI original, URI url, boolean rewritten) {
+      return new AutoValue_UrlRewriter_RewrittenURL(original, url, rewritten);
     }
+
+    abstract URI original();
 
     abstract URI url();
 
