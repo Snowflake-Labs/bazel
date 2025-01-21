@@ -1031,8 +1031,8 @@ public class HttpDownloaderTest {
       when(rewriter.amend(any()))
           .thenReturn(
               ImmutableList.of(
-                  UrlRewriter.RewrittenURL.create(primaryUrl, true),
-                  UrlRewriter.RewrittenURL.create(fallbackUrl, true)));
+                  UrlRewriter.RewrittenURL.create(originalUrl, primaryUrl, true),
+                  UrlRewriter.RewrittenURL.create(originalUrl, fallbackUrl, true)));
       when(rewriter.updateAuthHeaders(any(), any(), any())).thenReturn(ImmutableMap.of());
       downloadManager.setUrlRewriter(rewriter);
 
