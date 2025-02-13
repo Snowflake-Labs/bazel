@@ -15,15 +15,9 @@
 package com.google.devtools.build.lib.runtime;
 
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /** Utils for logging safely user commandlines. */
 public class SafeRequestLogging {
-  private static final Pattern suppressFromLog =
-      Pattern.compile(
-          "--client_env=([^=]*(?:auth|pass|cookie|token)[^=]*)=", Pattern.CASE_INSENSITIVE);
-
   private SafeRequestLogging() {}
 
   /**
@@ -34,22 +28,7 @@ public class SafeRequestLogging {
    * @return the filtered request to write to the log.
    */
   public static String getRequestLogString(List<String> requestStrings) {
-    StringBuilder buf = new StringBuilder();
-    buf.append('[');
-    String sep = "";
-    Matcher m = suppressFromLog.matcher("");
-    for (String s : requestStrings) {
-      buf.append(sep);
-      m.reset(s);
-      if (m.lookingAt()) {
-        buf.append(m.group());
-        buf.append("__private_value_removed__");
-      } else {
-        buf.append(s);
-      }
-      sep = ", ";
-    }
-    buf.append(']');
-    return buf.toString();
+    // TODO(jmmv): Reuse the same logic we have in the BEP redaction.
+    return "REDACTED";
   }
 }
