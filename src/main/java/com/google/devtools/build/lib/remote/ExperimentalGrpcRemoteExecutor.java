@@ -94,6 +94,7 @@ public class ExperimentalGrpcRemoteExecutor implements RemoteExecutionClient {
     private final ProgressiveBackoff waitExecutionBackoff;
     private final Function<ExecuteRequest, Iterator<Operation>> executeFunction;
     private final Function<WaitExecutionRequest, Iterator<Operation>> waitExecutionFunction;
+    private final RemoteOptions remoteOptions;
 
     // Last response (without error) we received from server.
     private Operation lastOperation;
@@ -104,7 +105,8 @@ public class ExperimentalGrpcRemoteExecutor implements RemoteExecutionClient {
         RemoteRetrier retrier,
         CallCredentialsProvider callCredentialsProvider,
         Function<ExecuteRequest, Iterator<Operation>> executeFunction,
-        Function<WaitExecutionRequest, Iterator<Operation>> waitExecutionFunction) {
+        Function<WaitExecutionRequest, Iterator<Operation>> waitExecutionFunction,
+        RemoteOptions remoteOptions) {
       this.request = request;
       this.observer = observer;
       this.retrier = retrier;
@@ -113,6 +115,7 @@ public class ExperimentalGrpcRemoteExecutor implements RemoteExecutionClient {
       this.waitExecutionBackoff = new ProgressiveBackoff(this.retrier::newBackoff);
       this.executeFunction = executeFunction;
       this.waitExecutionFunction = waitExecutionFunction;
+      this.remoteOptions = remoteOptions;
     }
 
     ExecuteResponse start() throws IOException, InterruptedException {
@@ -159,6 +162,16 @@ public class ExperimentalGrpcRemoteExecutor implements RemoteExecutionClient {
         //   3. Received NOT_FOUND error where we will retry Execute() (by returning null).
         //   4. Received consecutive retriable gRPC errors (up to max retry times).
         if (response == null) {
+          if (remoteOptions.skipWaitIfNoOperation && lastOperation == null) {
+            // If there's no operation to wait for, calling into waitExecution hits
+            // a precondition violation assertion failure, terminating the process.
+            // That causes bazel to terminate without writing output files such as
+            // execution profiles or coverage reports.  If there's no operation to
+            // wait for, it should be safe to skip ahead to the next loop iteration
+            // and retry the operation if appropriate.
+            continue;
+          }
+
           response =
               retrier.execute(
                   () ->
@@ -366,7 +379,8 @@ public class ExperimentalGrpcRemoteExecutor implements RemoteExecutionClient {
                 channel.withChannelBlocking(
                     channel ->
                         this.executionBlockingStub(context.getRequestMetadata(), channel)
-                            .waitExecution(req)));
+                            .waitExecution(req)),
+            remoteOptions);
     return execution.start();
   }
 

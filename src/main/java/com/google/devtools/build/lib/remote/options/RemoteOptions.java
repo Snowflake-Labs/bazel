@@ -835,6 +835,15 @@ public final class RemoteOptions extends CommonRemoteOptions {
               + " service.")
   public String remoteOutputServiceOutputPathPrefix;
 
+  @Option(
+      name = "snowflake_remote_skip_wait_if_no_operation",
+      defaultValue = "false",
+      documentationCategory = OptionDocumentationCategory.REMOTE,
+      effectTags = {OptionEffectTag.UNKNOWN},
+      help =
+          "If set, skip the wait for GRPC operation results unless there is an active operation.")
+  public boolean skipWaitIfNoOperation;
+
   private static final class ScrubberConverter extends Converter.Contextless<Scrubber> {
 
     @Override
