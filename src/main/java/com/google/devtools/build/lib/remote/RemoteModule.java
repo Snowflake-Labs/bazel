@@ -649,7 +649,8 @@ public final class RemoteModule extends BlazeModule {
                 retryScheduler,
                 circuitBreaker);
         remoteExecutor =
-            new GrpcRemoteExecutor(execChannel.retain(), callCredentialsProvider, execRetrier);
+            new GrpcRemoteExecutor(
+                remoteOptions, execChannel.retain(), callCredentialsProvider, execRetrier);
       }
       execChannel.release();
       RemoteExecutionCache remoteCache =

@@ -95,6 +95,14 @@ public final class RemoteOptions extends CommonRemoteOptions {
   public boolean remoteExecutionKeepalive;
 
   @Option(
+      name = "experimental_remote_execution_execute_timeouts",
+      defaultValue = "false",
+      documentationCategory = OptionDocumentationCategory.REMOTE,
+      effectTags = {OptionEffectTag.UNKNOWN},
+      help = "Whether to set timeouts on Execute remote execution calls.")
+  public boolean remoteExecutionExecuteTimeouts;
+
+  @Option(
       name = "experimental_remote_capture_corrupted_outputs",
       defaultValue = "null",
       documentationCategory = OptionDocumentationCategory.REMOTE,
