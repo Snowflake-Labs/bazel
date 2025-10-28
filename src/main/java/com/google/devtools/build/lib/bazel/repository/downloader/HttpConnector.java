@@ -41,6 +41,8 @@ import java.util.Locale;
 import java.util.Map;
 import javax.annotation.Nullable;
 import javax.annotation.WillClose;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
 
 /**
@@ -71,6 +73,7 @@ class HttpConnector {
   private final float timeoutScaling;
   private final int maxAttempts;
   private final Duration maxRetryTimeout;
+  private final @Nullable SSLContext sslContext;
 
   HttpConnector(
       Locale locale,
@@ -79,7 +82,8 @@ class HttpConnector {
       Sleeper sleeper,
       float timeoutScaling,
       int maxAttempts,
-      Duration maxRetryTimeout) {
+      Duration maxRetryTimeout,
+      SSLContext sslContext) {
     this.locale = locale;
     this.eventHandler = eventHandler;
     this.proxyHelper = proxyHelper;
@@ -87,6 +91,7 @@ class HttpConnector {
     this.timeoutScaling = timeoutScaling;
     this.maxAttempts = maxAttempts > 0 ? maxAttempts : MAX_ATTEMPTS;
     this.maxRetryTimeout = maxRetryTimeout;
+    this.sslContext = sslContext;
   }
 
   HttpConnector(
@@ -95,7 +100,7 @@ class HttpConnector {
       ProxyHelper proxyHelper,
       Sleeper sleeper,
       float timeoutScaling) {
-    this(locale, eventHandler, proxyHelper, sleeper, timeoutScaling, 0, Duration.ZERO);
+    this(locale, eventHandler, proxyHelper, sleeper, timeoutScaling, 0, Duration.ZERO, null);
   }
 
   HttpConnector(
@@ -126,7 +131,16 @@ class HttpConnector {
       HttpURLConnection connection = null;
       try {
         ProxyInfo proxyInfo = proxyHelper.createProxyIfNeeded(url);
-        connection = (HttpURLConnection) url.openConnection(proxyInfo.proxy());
+        if (HttpUtils.isProtocol(url, "https")) {
+          HttpsURLConnection httpsConnection = (HttpsURLConnection)
+              url.openConnection(proxyInfo.proxy());
+          if (sslContext != null) {
+            httpsConnection.setSSLSocketFactory(sslContext.getSocketFactory());
+          }
+          connection = httpsConnection;
+        } else {
+          connection = (HttpURLConnection) url.openConnection(proxyInfo.proxy());
+        }
         // For HTTP connections through authenticated proxies, set the Proxy-Authorization header.
         // For HTTPS, Java's HttpURLConnection handles CONNECT tunneling internally using the
         // Authenticator we set in ProxyHelper.
