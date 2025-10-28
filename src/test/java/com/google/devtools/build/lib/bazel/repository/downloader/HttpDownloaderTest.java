@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.Hashing;
 import com.google.common.io.ByteStreams;
+import com.google.devtools.build.lib.authandtls.AuthAndTLSOptions;
 import com.google.devtools.build.lib.authandtls.StaticCredentials;
 import com.google.devtools.build.lib.bazel.repository.cache.RepositoryCache;
 import com.google.devtools.build.lib.events.ExtendedEventHandler;
@@ -77,7 +78,8 @@ public class HttpDownloaderTest {
 
   private final RepositoryCache repositoryCache = mock(RepositoryCache.class);
   // Scale timeouts down to make test fast.
-  private final HttpDownloader httpDownloader = new HttpDownloader(0, Duration.ZERO, 8, .1f);
+  private final HttpDownloader httpDownloader = new HttpDownloader(
+      0, Duration.ZERO, 8, .1f, new AuthAndTLSOptions());
   private final DownloadManager downloadManager =
       new DownloadManager(repositoryCache, httpDownloader, httpDownloader);
 

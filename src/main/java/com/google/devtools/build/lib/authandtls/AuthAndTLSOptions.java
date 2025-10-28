@@ -186,6 +186,17 @@ public class AuthAndTLSOptions extends OptionsBase {
               + " the helper does not provide when the credentials expire.")
   public Duration credentialHelperCacheTimeout;
 
+  @Option(
+      name = "experimental_use_tls_in_http_downloader",
+      defaultValue = "false",
+      documentationCategory = OptionDocumentationCategory.UNCATEGORIZED,
+      effectTags = {OptionEffectTag.CHANGES_INPUTS},
+      help =
+          "Whether to propagate TLS certificates and keys to the HTTP downloader. This is optional"
+              + " in case the new code to parse the (pre-existing) files doesn't work in this new"
+              + " context.")
+  public boolean useTlsInHttpDownloader;
+
   /** One of the values of the `--credential_helper` flag. */
   @AutoValue
   public abstract static class CredentialHelperOption {
