@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.io.ByteStreams;
+import com.google.devtools.build.lib.authandtls.AuthAndTLSOptions;
 import com.google.devtools.build.lib.buildeventstream.BuildEventStreamProtos.BuildEventId.FetchId;
 import com.google.devtools.build.lib.buildeventstream.FetchEvent;
 import com.google.devtools.build.lib.clock.Clock;
@@ -41,6 +42,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Semaphore;
+import javax.net.ssl.SSLContext;
 
 /**
  * HTTP implementation of {@link Downloader}.
@@ -59,17 +61,20 @@ public class HttpDownloader implements Downloader {
   private final float timeoutScaling;
   private final int maxAttempts;
   private final Duration maxRetryTimeout;
+  private final AuthAndTLSOptions authAndTLSOptions;
 
   public HttpDownloader(
-      int maxAttempts, Duration maxRetryTimeout, int maxParallelDownloads, float timeoutScaling) {
+      int maxAttempts, Duration maxRetryTimeout, int maxParallelDownloads, float timeoutScaling,
+      AuthAndTLSOptions authAndTLSOptions) {
     this.maxAttempts = maxAttempts;
     this.maxRetryTimeout = maxRetryTimeout;
     semaphore = new Semaphore(maxParallelDownloads, true);
     this.timeoutScaling = timeoutScaling;
+    this.authAndTLSOptions = authAndTLSOptions;
   }
 
   public HttpDownloader() {
-    this(0, Duration.ZERO, 8, 1.0f);
+    this(0, Duration.ZERO, 8, 1.0f, new AuthAndTLSOptions());
   }
 
   @Override
@@ -173,8 +178,12 @@ public class HttpDownloader implements Downloader {
   }
 
   private HttpConnectorMultiplexer setUpConnectorMultiplexer(
-      ExtendedEventHandler eventHandler, Map<String, String> clientEnv) {
+      ExtendedEventHandler eventHandler, Map<String, String> clientEnv) throws IOException {
     ProxyHelper proxyHelper = new ProxyHelper(clientEnv);
+    SSLContext maybeSslContext = null;
+    if (authAndTLSOptions.useTlsInHttpDownloader) {
+      maybeSslContext = SSLContextBuilder.build(authAndTLSOptions);
+    }
     HttpConnector connector =
         new HttpConnector(
             LOCALE,
@@ -183,7 +192,8 @@ public class HttpDownloader implements Downloader {
             SLEEPER,
             timeoutScaling,
             maxAttempts,
-            maxRetryTimeout);
+            maxRetryTimeout,
+            maybeSslContext);
     ProgressInputStream.Factory progressInputStreamFactory =
         new ProgressInputStream.Factory(LOCALE, CLOCK, eventHandler);
     HttpStream.Factory httpStreamFactory = new HttpStream.Factory(progressInputStreamFactory);
