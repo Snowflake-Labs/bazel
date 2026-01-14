@@ -366,8 +366,6 @@ public final class Command implements DescribableExecutionUnit {
       message.append(arg);
       message.append(']');
     }
-    message.append("; environment: ");
-    message.append(subprocessBuilder.getEnv());
     message.append("; working dir: ");
     File workingDirectory = subprocessBuilder.getWorkingDirectory();
     message.append(workingDirectory == null ? "(current)" : workingDirectory.toString());
