@@ -14,6 +14,7 @@
 
 package com.google.devtools.build.buildjar.instrumentation;
 
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 
 import com.google.common.io.MoreFiles;
@@ -103,23 +104,35 @@ public final class JacocoInstrumentationProcessor {
             // It's not clear whether there is any advantage in not instrumenting *Test classes,
             // apart from lowering the covered percentage in the aggregate statistics.
 
-            // We first copy the original .class file to our metadata directory, then instrument it
-            // and rewrite the instrumented version back into the regular classes output directory.
+            try {
+              // We first copy the original .class file to our metadata directory, then instrument
+              // it and rewrite the instrumented version back into the regular classes output
+              // directory.
 
-            // Not moving or unlinking the source .class file is essential to guarantee visiting
-            // it only once during recursive directory traversal while also mutating the directory.
-            Path instrumentedCopy = file;
-            Path absoluteUninstrumentedCopy = Path.of(file + ".uninstrumented");
-            Path uninstrumentedCopy =
-                instrumentedClassesDirectory.resolve(root.relativize(absoluteUninstrumentedCopy));
-            Files.createDirectories(uninstrumentedCopy.getParent());
-            Files.copy(file, uninstrumentedCopy);
-            try (InputStream input =
-                    new BufferedInputStream(Files.newInputStream(uninstrumentedCopy));
-                OutputStream output =
-                    new BufferedOutputStream(
-                        Files.newOutputStream(instrumentedCopy, TRUNCATE_EXISTING))) {
-              instr.instrument(input, output, file.toString());
+              // Not moving or unlinking the source .class file is essential to guarantee visiting
+              // it only once during recursive directory traversal while also mutating the
+              // directory.
+              Path instrumentedCopy = file;
+              Path absoluteUninstrumentedCopy = Path.of(file + ".uninstrumented");
+              Path uninstrumentedCopy =
+                  instrumentedClassesDirectory.resolve(root.relativize(absoluteUninstrumentedCopy));
+              Files.createDirectories(uninstrumentedCopy.getParent());
+              Files.copy(file, uninstrumentedCopy);
+              try (InputStream input =
+                      new BufferedInputStream(Files.newInputStream(uninstrumentedCopy));
+                  OutputStream output =
+                      new BufferedOutputStream(
+                          Files.newOutputStream(instrumentedCopy, TRUNCATE_EXISTING))) {
+                instr.instrument(input, output, file.toString());
+              } catch (Exception e) {
+                // instrument() writes directly over the original .class file, so a failure
+                // partway through leaves it truncated. Restore it from the uninstrumented copy
+                // so the class stays loadable and the output jar remains valid.
+                Files.copy(uninstrumentedCopy, instrumentedCopy, REPLACE_EXISTING);
+                throw e; // Bubble up to the outer broader safety catch block for logging.
+              }
+            } catch (Exception e) {
+              System.err.printf("WARNING: %s was not instrumented: %s%n", file, e.getMessage());
             }
             return FileVisitResult.CONTINUE;
           }
