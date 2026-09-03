@@ -6,6 +6,7 @@
 # classes before a real change could reach this repo. It is NOT wired up to
 # action.yml or any workflow, so it never executes as part of the action.
 # It must never be merged into any branch that ships.
+# additional change
 #
 # Intentional vulnerabilities:
 #   1. CWE-798 Hardcoded Credentials (severity: High)
