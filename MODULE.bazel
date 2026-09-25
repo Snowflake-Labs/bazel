@@ -58,6 +58,17 @@ switched_rules.use_languages(
     python = True,
 )
 
+# CentOS 7 compatibility: the nodes that build the bazel8 and remote-java-tools8
+# snowdev packages need rules_java 8.12.0. A bazel_dep downgrade cannot express
+# this -- a transitive dependency requires 8.14.0, so MVS selects 8.14.0 and the
+# downgrade has no effect, while the declared-vs-resolved mismatch trips
+# --check_direct_dependencies=error (set in .bazelrc). An override pins it for
+# real and is exempt from that check.
+single_version_override(
+    module_name = "rules_java",
+    version = "8.12.0",
+)
+
 single_version_override(
     module_name = "rules_jvm_external",
     patch_strip = 1,
